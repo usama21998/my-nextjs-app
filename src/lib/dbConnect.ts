@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { Connection } from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI as string;
 
@@ -6,7 +6,13 @@ if (!MONGODB_URI) {
     throw new Error('Please define the MONGODB_URI environment variable');
 }
 
-const cached = (global as any).mongoose || { conn: null, promise: null };
+// Explicitly type the cached object
+interface CachedConnection {
+    conn: Connection | null;
+    promise: Promise<Connection> | null;
+}
+
+const cached: CachedConnection = (global as any).mongoose || { conn: null, promise: null };
 
 export async function dbConnect() {
     if (cached.conn) {
@@ -19,9 +25,10 @@ export async function dbConnect() {
             .connect(MONGODB_URI, {
                 dbName: 'nextauthdb',
             })
-            .then((mongoose) => {
+            .then(() => {
+                // Now we correctly get the connection from mongoose.connection
                 console.log('✅ MongoDB connected successfully');
-                return mongoose;
+                return mongoose.connection;
             })
             .catch((error) => {
                 console.error('❌ MongoDB connection error:', error);
