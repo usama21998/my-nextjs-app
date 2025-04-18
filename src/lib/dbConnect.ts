@@ -1,43 +1,27 @@
-import mongoose, { Connection } from 'mongoose';
+import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI as string;
-
 if (!MONGODB_URI) {
     throw new Error('Please define the MONGODB_URI environment variable');
 }
 
-// Extend the NodeJS Global type to include `mongoose`
-declare global {
-    var mongoose: {
-        conn: Connection | null;
-        promise: Promise<Connection> | null;
-    };
-}
-
-const cached = global.mongoose || { conn: null, promise: null };
+let cachedConnection: mongoose.Connection | null = null;
 
 export async function dbConnect() {
-    if (cached.conn) {
+    if (cachedConnection) {
         console.log('✅ MongoDB already connected');
-        return cached.conn;
+        return cachedConnection;
     }
 
-    if (!cached.promise) {
-        cached.promise = mongoose
-            .connect(MONGODB_URI, {
-                dbName: 'nextauthdb',
-            })
-            .then(() => {
-                // Now we correctly get the connection from mongoose.connection
-                console.log('✅ MongoDB connected successfully');
-                return mongoose.connection;
-            })
-            .catch((error) => {
-                console.error('❌ MongoDB connection error:', error);
-                throw error;
-            });
+    try {
+        const connection = await mongoose.connect(MONGODB_URI, {
+            dbName: 'nextauthdb',
+        });
+        console.log('✅ MongoDB connected successfully');
+        cachedConnection = connection.connection;
+        return cachedConnection;
+    } catch (error) {
+        console.error('❌ MongoDB connection error:', error);
+        throw new Error('Failed to connect to MongoDB');
     }
-
-    cached.conn = await cached.promise;
-    return cached.conn;
 }
