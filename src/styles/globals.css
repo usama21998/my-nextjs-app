@@ -1,0 +1,4 @@
+.bg-animated {
+    background: linear-gradient(45deg, #1a2a6c, #b21f1f);
+    background-size: 400% 400%;
+}
